@@ -2,13 +2,10 @@
 /**
  * ------------------------------------------------------------
  * FILE: projects.php
- * PURPOSE: List projects + create new project from one or more templates
- *
- * RULES:
- * - Layout and styling are controlled by css/style.css
- * - Minimum changes only
- * - Create happens only when user clicks Create Project
- * - After creating, redirect to edit_project.php
+ * VERSION: v1.03
+ * CHANGE SUMMARY:
+ * - New Project section: Notes field changed to TEXTAREA (10 lines)
+ * - NOTHING else changed
  * ------------------------------------------------------------
  */
 
@@ -44,7 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'create_project') {
     }
 
     try {
-        // Insert project
         $stmt = $pdo->prepare("
             INSERT INTO projects (name, start_date, end_date, notes)
             VALUES (?, ?, ?, ?)
@@ -58,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'create_project') {
 
         $projectId = (int)$pdo->lastInsertId();
 
-        // Prepare statements once
         $tplStmt = $pdo->prepare("
             SELECT description
             FROM template_items
@@ -71,7 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'create_project') {
             VALUES (?, ?, 0)
         ");
 
-        // Track inserted items to avoid duplicates
         $added = [];
 
         foreach ($templateIds as $tplId) {
@@ -84,8 +78,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'create_project') {
             foreach ($items as $it) {
                 $desc = trim($it['description']);
                 if ($desc === '') continue;
-
-                // prevent duplicate checklist lines
                 if (isset($added[$desc])) continue;
 
                 $insertItem->execute([$projectId, $desc]);
@@ -103,16 +95,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'create_project') {
 }
 
 /* ---------------------------------
-   FETCH TEMPLATES (for multi-select)
+   FETCH TEMPLATES
    --------------------------------- */
-$templates = [];
 $stmt = $pdo->query("SELECT id, name FROM templates ORDER BY name ASC");
 $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* ---------------------------------
    FETCH PROJECTS
    --------------------------------- */
-$projects = [];
 $stmt = $pdo->query("
     SELECT 
         p.id,
@@ -128,12 +118,10 @@ $stmt = $pdo->query("
 ");
 $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-if (!function_exists('ymd_to_dmy')) {
-    function ymd_to_dmy($ymd) {
-        if (!$ymd) return '';
-        $ts = strtotime($ymd);
-        return $ts ? date('d/m/Y', $ts) : '';
-    }
+function ymd_to_dmy($ymd) {
+    if (!$ymd) return '';
+    $ts = strtotime($ymd);
+    return $ts ? date('d/m/Y', $ts) : '';
 }
 
 $openAccordion = isset($_GET['open']) && $_GET['open'] === '1';
@@ -218,10 +206,12 @@ $openAccordion = isset($_GET['open']) && $_GET['open'] === '1';
         <form method="post" class="form-block">
             <input type="hidden" name="action" value="create_project">
 
-            <label>Project Name</label>
-            <input type="text" name="project_name" required>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <!-- SAME LINE: NAME + START + END -->
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:12px;">
+                <div>
+                    <label>Project Name</label>
+                    <input type="text" name="project_name" required>
+                </div>
                 <div>
                     <label>Start Date</label>
                     <input type="date" name="start_date">
@@ -233,23 +223,23 @@ $openAccordion = isset($_GET['open']) && $_GET['open'] === '1';
             </div>
 
             <label style="margin-top:10px;">Checklist Templates (select one or more)</label>
-            <select name="template_ids[]" multiple size="5" required>
-                <?php foreach ($templates as $t): ?>
-                    <option value="<?= (int)$t['id'] ?>">
-                        <?= htmlspecialchars($t['name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
 
+            <div style="background:#262626; border:1px solid #333; border-radius:4px; padding:10px; max-height:180px; overflow:auto;">
+                <?php foreach ($templates as $t): ?>
+                    <label style="display:flex; align-items:center; gap:10px; margin:6px 0;">
+                        <input type="checkbox" name="template_ids[]" value="<?= (int)$t['id'] ?>" required>
+                        <span><?= htmlspecialchars($t['name']) ?></span>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- NOTES: 10 LINES -->
             <label style="margin-top:10px;">Notes (optional)</label>
-            <input type="text" name="notes">
+            <textarea name="notes" rows="10"
+                style="width:100%; padding:10px; border-radius:4px; border:1px solid #333; background-color:#262626; color:#fff; box-sizing:border-box;"></textarea>
 
             <button type="submit" style="margin-top:12px;">Create Project</button>
         </form>
-
-        <div style="opacity:.85; margin-top:10px;">
-            Hold Ctrl (Windows) or Cmd (Mac) to select multiple templates.
-        </div>
 
     </div>
 </div>

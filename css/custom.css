@@ -1,0 +1,14 @@
+h2, h3 {
+
+    padding: 0 0 1rem 0;
+}
+
+.accordion-content.open {
+
+    background-color: #444444;
+}
+
+.templates-table {
+
+    font-size: .8rem;
+}
