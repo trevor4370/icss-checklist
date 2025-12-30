@@ -2,9 +2,11 @@
 /**
  * ------------------------------------------------------------
  * FILE: projects.php
- * VERSION: v1.03
+ * VERSION: v1.05
  * CHANGE SUMMARY:
- * - New Project section: Notes field changed to TEXTAREA (10 lines)
+ * - FIXED: Template checkboxes no longer require ALL boxes checked
+ * - Now requires AT LEAST ONE template selected (proper behaviour)
+ * - Implemented with a tiny JS check on submit (no DB/logic changes)
  * - NOTHING else changed
  * ------------------------------------------------------------
  */
@@ -197,13 +199,16 @@ $openAccordion = isset($_GET['open']) && $_GET['open'] === '1';
 <!-- NEW PROJECT (accordion like templates) -->
 <div class="accordion" style="margin-top:20px;">
 
-    <button class="accordion-toggle" type="button" onclick="toggleAccordion()">
-        + New Project
-    </button>
+    <!-- CENTERED BUTTON -->
+    <div style="text-align:center;">
+        <button class="accordion-toggle" type="button" onclick="toggleAccordion()">
+            + New Project
+        </button>
+    </div>
 
     <div id="accordion-content" class="accordion-content<?= $openAccordion ? ' open' : ''; ?>">
 
-        <form method="post" class="form-block">
+        <form method="post" class="form-block" id="newProjectForm" onsubmit="return validateTemplates();">
             <input type="hidden" name="action" value="create_project">
 
             <!-- SAME LINE: NAME + START + END -->
@@ -227,10 +232,15 @@ $openAccordion = isset($_GET['open']) && $_GET['open'] === '1';
             <div style="background:#262626; border:1px solid #333; border-radius:4px; padding:10px; max-height:180px; overflow:auto;">
                 <?php foreach ($templates as $t): ?>
                     <label style="display:flex; align-items:center; gap:10px; margin:6px 0;">
-                        <input type="checkbox" name="template_ids[]" value="<?= (int)$t['id'] ?>" required>
+                        <!-- IMPORTANT: removed required from each checkbox -->
+                        <input type="checkbox" class="tplbox" name="template_ids[]" value="<?= (int)$t['id'] ?>">
                         <span><?= htmlspecialchars($t['name']) ?></span>
                     </label>
                 <?php endforeach; ?>
+            </div>
+
+            <div id="tplError" class="error" style="display:none; margin-top:10px;">
+                Please select at least one template.
             </div>
 
             <!-- NOTES: 10 LINES -->
@@ -248,7 +258,23 @@ $openAccordion = isset($_GET['open']) && $_GET['open'] === '1';
 function toggleAccordion() {
     document.getElementById('accordion-content').classList.toggle('open');
 }
+
+/* Require at least one checkbox selected (instead of ALL required) */
+function validateTemplates() {
+    const boxes = document.querySelectorAll('.tplbox');
+    let anyChecked = false;
+    boxes.forEach(b => { if (b.checked) anyChecked = true; });
+
+    const err = document.getElementById('tplError');
+    if (!anyChecked) {
+        if (err) err.style.display = 'block';
+        return false;
+    }
+    if (err) err.style.display = 'none';
+    return true;
+}
 </script>
 
 </body>
 </html>
+
